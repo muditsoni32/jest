@@ -5,7 +5,7 @@ RUN apk add --no-cache python3
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --python 
+RUN npm install -g --python 
 RUN npm install
 
 COPY . .
@@ -18,6 +18,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY package*.json ./
+RUN npm install -g node-pre-gyp
 RUN npm install
 
 COPY --from=builder /app/node_modules ./node_modules

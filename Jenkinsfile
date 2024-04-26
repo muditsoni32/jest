@@ -2,41 +2,51 @@ pipeline {
     agent any
     
     environment {
-        SSH_AGENT_CREDENTIALS = credentials('mudit_test') // Update with your SSH credentials ID
-        REMOTE_USER = 'ec2-user' // Update with your remote username
-        REMOTE_HOST = '18.206.147.42' // Update with your remote host IP
-        REMOTE_DIR = '/home' // Update with the directory where you want to deploy
+        // Define SSH credentials for connecting to the remote server
+        SSH_CREDENTIALS = credentials('mudit_test')
+        REMOTE_USER = 'ec2-user'
+        REMOTE_HOST = '18.206.147.42'
+        REMOTE_PATH = '/app'
     }
     
     stages {
         stage('Build') {
             steps {
+                // Checkout the code from Git
+                checkout scm
+                
+                // Build Docker image
                 script {
-                    // Start SSH Agent and add SSH credentials
-                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
-                        // Build the Docker image on the remote server
-                        sh "ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker build -t my-node-app .'"
-                    }
+                    docker.build("jest-junit-reporter")
                 }
             }
         }
         
         stage('Test') {
             steps {
+                // Run tests inside Docker container
                 script {
-                    // Run tests inside the Docker container on the remote server
-                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
-                        sh "ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker run --rm my-node-app npm test --coverage --reporters=jest-junit'"
+                    docker.image("jest-junit-reporter").inside {
+                        sh 'npm test'
                     }
                 }
+                
+                // Publish test results using JUnit plugin
+                junit testDataPublishers: [attachments()], testResults: '/app'
             }
-            
-            post {
-                always {
-                    // Archive test results
-                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
-                        sh "scp ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/test-results.xml ."
-                        junit 'test-results.xml'
+        }
+        
+        stage('Deploy') {
+            steps {
+                // Copy Docker image to remote server
+                script {
+                    sh "docker save jest-junit-reporter | sshpass -p ${SSH_CREDENTIALS} ssh ${REMOTE_USER}@${REMOTE_HOST} 'docker load'"
+                }
+                
+                // SSH into remote server and start Docker container
+                script {
+                    sshagent(credentials: [SSH_CREDENTIALS]) {
+                        sh "ssh ${REMOTE_USER}@${REMOTE_HOST} 'docker run -d -p 3000:3000 --name jest-junit-reporter jest-junit-reporter'"
                     }
                 }
             }

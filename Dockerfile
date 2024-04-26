@@ -5,7 +5,7 @@ RUN apk add --no-cache python3
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install --python /usr/lib/python3
+RUN npm install --python 
 RUN npm install
 
 COPY . .

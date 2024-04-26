@@ -1,11 +1,12 @@
 FROM node:18-alpine AS builder
 
-RUN apk add --no-cache python3
+# Install Python 3 and other necessary build dependencies
+RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install -g --python 
+RUN npm install -g --python
 RUN npm install
 
 COPY . .

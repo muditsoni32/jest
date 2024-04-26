@@ -13,7 +13,7 @@ pipeline {
             steps {
                 script {
                     // Start SSH Agent and add SSH credentials
-                    sshagent(credentials: [SSH_AGENT_CREDENTIALS]) {
+                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
                         // Build the Docker image on the remote server
                         sh "ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker build -t my-node-app .'"
                     }
@@ -25,7 +25,7 @@ pipeline {
             steps {
                 script {
                     // Run tests inside the Docker container on the remote server
-                    sshagent(credentials: [SSH_AGENT_CREDENTIALS]) {
+                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
                         sh "ssh ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && docker run --rm my-node-app npm test --coverage --reporters=jest-junit'"
                     }
                 }
@@ -34,7 +34,7 @@ pipeline {
             post {
                 always {
                     // Archive test results
-                    sshagent(credentials: [SSH_AGENT_CREDENTIALS]) {
+                    sshagent(credentials: [$SSH_AGENT_CREDENTIALS]) {
                         sh "scp ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/test-results.xml ."
                         junit 'test-results.xml'
                     }
